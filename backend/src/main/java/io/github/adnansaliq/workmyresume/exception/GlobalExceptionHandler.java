@@ -1,0 +1,80 @@
+package io.github.adnansaliq.workmyresume.exception;
+
+import io.github.adnansaliq.workmyresume.dto.ExceptionResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ExceptionResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage(ex.getMessage());
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ExceptionResponse> handleGenericException(Exception ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage("An unexpected error occurred");
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ExceptionResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex){
+        System.out.println("Bad Request"+ex.getMessage());
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage("Bad request");
+        response.setTimestamp(OffsetDateTime.now());
+        Map<String,String> errors = new HashMap<>();
+        for(FieldError error: ex.getBindingResult().getFieldErrors()){
+            errors.putIfAbsent(error.getField(), error.getDefaultMessage());
+        }
+        response.setErrors(errors);
+
+        return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ExceptionResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setTimestamp(OffsetDateTime.now());
+
+        if (ex.getRootCause() != null) {
+            String rootMsg = ex.getRootCause().getMessage();
+            if (rootMsg != null && rootMsg.contains("Required request body")) {
+                response.setMessage("Required request body is missing");
+            }
+            response.setMessage("Invalid request body");
+        }
+        response.setMessage("Malformed JSON request");
+
+        return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ExceptionResponse> handleBadCredentials() {
+
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage("Invalid credentials");
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response,HttpStatus.UNAUTHORIZED);
+    }
+}
