@@ -5,7 +5,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -87,6 +88,28 @@ public class GlobalExceptionHandler {
         response.setTimestamp(OffsetDateTime.now());
 
         return new ResponseEntity<>(response,HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ExceptionResponse> handleDisabledAccount() {
+
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage("Account is disabled");
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ExceptionResponse> handleAccessDenied(AccessDeniedException ex) {
+        // @PreAuthorize failures surface as AuthorizationDeniedException (extends
+        // AccessDeniedException) inside the servlet; they must stay 403, not be
+        // swallowed by the generic 500 handler.
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage("Access denied");
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
