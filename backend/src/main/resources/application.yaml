@@ -25,3 +25,9 @@ spring:
 
 app:
   upload-dir: uploads
+  ai:
+    # OpenAI-compatible chat completions endpoint.
+    base-url: https://api.openai.com/v1
+    model: gpt-4o-mini
+    # api-key is NOT set here. Provide it via the APP_AI_APIKEY environment variable.
+    # When it is unset or blank, the heuristic analyzer is used instead of the LLM.
