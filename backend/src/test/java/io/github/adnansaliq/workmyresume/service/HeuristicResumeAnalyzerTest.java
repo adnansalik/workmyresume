@@ -26,6 +26,15 @@ class HeuristicResumeAnalyzerTest {
     }
 
     @Test
+    void emptyResumeScoresLowWithoutCrashing() {
+        AnalysisResult result = analyzer.analyze("", null);
+
+        assertThat(result.score()).isBetween(0, 40);
+        assertThat(result.strengths()).isNotEmpty();
+        assertThat(result.suggestions()).anyMatch(s -> s.contains("email"));
+    }
+
+    @Test
     void jobDescriptionDrivesGapsForMissingKeywords() {
         String resume = longResume("Python and SQL only", 10);
         String jd = "We need Java and Kubernetes expertise plus Python";
