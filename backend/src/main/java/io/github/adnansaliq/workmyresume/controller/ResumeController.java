@@ -3,12 +3,15 @@ package io.github.adnansaliq.workmyresume.controller;
 import io.github.adnansaliq.workmyresume.domain.Plan;
 import io.github.adnansaliq.workmyresume.domain.ResumeFile;
 import io.github.adnansaliq.workmyresume.domain.User;
+import io.github.adnansaliq.workmyresume.dto.AnalyzeRequest;
 import io.github.adnansaliq.workmyresume.dto.CreateResumeRequest;
 import io.github.adnansaliq.workmyresume.dto.CreateVersionRequest;
+import io.github.adnansaliq.workmyresume.dto.ResumeAnalysisResponse;
 import io.github.adnansaliq.workmyresume.dto.ResumeDetailResponse;
 import io.github.adnansaliq.workmyresume.dto.ResumeResponse;
 import io.github.adnansaliq.workmyresume.dto.ResumeVersionResponse;
 import io.github.adnansaliq.workmyresume.repository.UserRepository;
+import io.github.adnansaliq.workmyresume.service.AnalysisService;
 import io.github.adnansaliq.workmyresume.service.FileStorageService;
 import io.github.adnansaliq.workmyresume.service.ResumeService;
 import jakarta.validation.Valid;
@@ -38,13 +41,16 @@ public class ResumeController {
     private final UserRepository userRepository;
     private final ResumeService resumeService;
     private final FileStorageService fileStorageService;
+    private final AnalysisService analysisService;
 
     public ResumeController(UserRepository userRepository,
                             ResumeService resumeService,
-                            FileStorageService fileStorageService) {
+                            FileStorageService fileStorageService,
+                            AnalysisService analysisService) {
         this.userRepository = userRepository;
         this.resumeService = resumeService;
         this.fileStorageService = fileStorageService;
+        this.analysisService = analysisService;
     }
 
     @GetMapping("/resume/analyze")
@@ -143,5 +149,20 @@ public class ResumeController {
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(content);
+    }
+
+    @PostMapping("/resumes/{resumeId}/versions/{versionId}/analyze")
+    public ResponseEntity<ResumeAnalysisResponse> analyzeResume(
+            @PathVariable Long resumeId,
+            @PathVariable Long versionId,
+            @RequestBody(required = false) @Valid AnalyzeRequest request,
+            Authentication authentication) {
+
+        String jobDescription = request == null ? null : request.getJobDescription();
+
+        ResumeAnalysisResponse response = analysisService.analyzeVersion(
+                authentication.getName(), resumeId, versionId, jobDescription);
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }
