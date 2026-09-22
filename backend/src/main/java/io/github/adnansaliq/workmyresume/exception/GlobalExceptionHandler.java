@@ -112,6 +112,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(UsageLimitExceededException.class)
+    public ResponseEntity<ExceptionResponse> handleUsageLimit(UsageLimitExceededException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage(ex.getMessage());
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ExceptionResponse> handleResourceNotFound(ResourceNotFoundException ex){
         ExceptionResponse response = new ExceptionResponse();
