@@ -1,6 +1,8 @@
 package io.github.adnansaliq.workmyresume.config;
 
+import io.github.adnansaliq.workmyresume.security.CustomOAuth2UserService;
 import io.github.adnansaliq.workmyresume.security.JwtAuthenticationFilter;
+import io.github.adnansaliq.workmyresume.security.OAuthLoginSuccessHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,13 +13,16 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 
 import java.util.Arrays;
 import java.util.List;
@@ -27,14 +32,15 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuthLoginSuccessHandler oauthLoginSuccessHandler;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          CustomOAuth2UserService customOAuth2UserService,
+                          OAuthLoginSuccessHandler oauthLoginSuccessHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        this.customOAuth2UserService = customOAuth2UserService;
+        this.oauthLoginSuccessHandler = oauthLoginSuccessHandler;
     }
 
     /**
@@ -67,12 +73,33 @@ public class SecurityConfig {
                 // Allow public access to signup
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/users","/health","/auth/*"
+                                "/users","/health","/auth/*","/login","/oauth2/**"
                             ).permitAll()
                         .anyRequest().authenticated()
                 )
+                // The API itself is token-based, but the OAuth authorization-code
+                // flow needs a session for its state parameter. IF_REQUIRED means
+                // sessions are only created for the OAuth dance.
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
+
+                // Anonymous API requests must get a JSON 401 (not the 302 redirect
+                // that oauth2Login would otherwise use for browser flows).
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter()
+                                    .write("{\"message\":\"Authentication required\"}");
+                        }
+                ))
+
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(ui -> ui.userService(customOAuth2UserService))
+                        .successHandler(oauthLoginSuccessHandler)
                 )
 
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

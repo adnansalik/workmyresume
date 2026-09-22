@@ -44,6 +44,13 @@ app:
     window-seconds: 60
     paths: /auth/
 
+  # Where the browser lands after a successful OAuth login; receives ?token=<JWT>.
+  oauth:
+    redirect-url: http://localhost:3000/oauth/callback
+    # Providers activate automatically when these are set (e.g. via env):
+    #   providers.google-client-id / google-client-secret
+    #   providers.github-client-id / github-client-secret
+
   ai:
     # OpenAI-compatible chat completions endpoint.
     base-url: https://api.openai.com/v1
