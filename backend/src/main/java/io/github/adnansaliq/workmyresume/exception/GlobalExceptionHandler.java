@@ -6,10 +6,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +31,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionResponse> handleGenericException(Exception ex){
+        // Respect the status/message of ResponseStatusException (e.g. thrown by controllers)
+        // instead of masking it inside the generic 500 handler.
+        if (ex instanceof ResponseStatusException responseStatusException) {
+            ExceptionResponse response = new ExceptionResponse();
+            response.setMessage(responseStatusException.getReason());
+            response.setTimestamp(OffsetDateTime.now());
+            return new ResponseEntity<>(response, responseStatusException.getStatusCode());
+        }
+
         ExceptionResponse response = new ExceptionResponse();
         response.setMessage("An unexpected error occurred");
         response.setTimestamp(OffsetDateTime.now());
@@ -76,5 +87,32 @@ public class GlobalExceptionHandler {
         response.setTimestamp(OffsetDateTime.now());
 
         return new ResponseEntity<>(response,HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleResourceNotFound(ResourceNotFoundException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage(ex.getMessage());
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleUsernameNotFound(UsernameNotFoundException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage("User not found");
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(UnsupportedFileTypeException.class)
+    public ResponseEntity<ExceptionResponse> handleUnsupportedFileType(UnsupportedFileTypeException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage(ex.getMessage());
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 }
