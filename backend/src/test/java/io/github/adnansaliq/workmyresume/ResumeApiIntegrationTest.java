@@ -18,7 +18,7 @@ class ResumeApiIntegrationTest extends BaseIntegrationTest {
     @Test
     void unauthenticatedResumeCallIsRejected() throws Exception {
         mockMvc.perform(get("/resumes"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

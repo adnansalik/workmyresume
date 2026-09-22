@@ -77,7 +77,7 @@ class SecurityAndAuthIntegrationTest extends BaseIntegrationTest {
     void invalidJwtIsRejected() throws Exception {
         mockMvc.perform(get("/resumes")
                         .header("Authorization", BEARER + "not-a-real-jwt"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -94,7 +94,7 @@ class SecurityAndAuthIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(get("/resumes")
                         .header("Authorization", BEARER + expired))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
