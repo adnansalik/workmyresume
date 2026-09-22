@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.web.cors.CorsConfiguration;
@@ -73,9 +74,22 @@ public class SecurityConfig {
                 // Allow public access to signup
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/users","/health","/auth/*","/login","/oauth2/**"
+                                "/users","/health","/auth/*","/login","/oauth2/**",
+                                "/actuator/health"
                             ).permitAll()
                         .anyRequest().authenticated()
+                )
+                // Security headers: protect against clickjacking/XSS/MIME sniffing,
+                // and keep browser features scoped down.
+                .headers(headers -> headers
+                        .httpStrictTransportSecurity(hsts ->
+                                hsts.includeSubDomains(true).maxAgeInSeconds(3_153_600))
+                        .contentSecurityPolicy(csp ->
+                                csp.policyDirectives("default-src 'self'; frame-ancestors 'none'"))
+                        .referrerPolicy(ref ->
+                                ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .permissionsPolicy(pp ->
+                                pp.policy("camera=(), microphone=(), geolocation=()"))
                 )
                 // The API itself is token-based, but the OAuth authorization-code
                 // flow needs a session for its state parameter. IF_REQUIRED means

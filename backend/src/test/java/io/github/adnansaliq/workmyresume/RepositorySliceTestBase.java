@@ -15,6 +15,7 @@ public abstract class RepositorySliceTestBase {
 
     @DynamicPropertySource
     static void testDatabase(DynamicPropertyRegistry registry) {
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         String port = System.getenv("TEST_DB_PORT");
         if (port != null && !port.isBlank()) {
             registry.add("spring.datasource.url",

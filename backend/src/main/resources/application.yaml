@@ -6,7 +6,8 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      # Schema is owned by Flyway migrations, not Hibernate.
+      ddl-auto: none
       show-sql: true
       properties:
         hibernate:
@@ -14,6 +15,11 @@ spring:
     # Disable open-in-view: lazy loading must happen inside @Transactional
     # service methods, not during request/view rendering.
     open-in-view: false
+
+  flyway:
+    # Adopt an existing Hibernate-created dev schema as the baseline so the
+    # first migration does not try to re-create it.
+    baseline-on-migrate: true
 
   application:
     name: workmyresume
