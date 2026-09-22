@@ -35,6 +35,8 @@ public class UserService {
         user.setPassword(hashedPassword);
 
         userRepository.save(user);
+
+
         return user;
 
     }

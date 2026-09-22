@@ -8,4 +8,5 @@ import lombok.Setter;
 public class Signinresponse {
     public Boolean success;
     public String email;
+    public String token;
 }

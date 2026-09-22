@@ -23,5 +23,12 @@ public class User {
     private Boolean isActive=true;
     @Column(name = "created_at",updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.ROLE_USER;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Plan plan = Plan.FREE;
+
 }
 
