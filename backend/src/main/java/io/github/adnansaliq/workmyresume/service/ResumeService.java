@@ -13,8 +13,6 @@ import io.github.adnansaliq.workmyresume.dto.ResumeVersionResponse;
 import io.github.adnansaliq.workmyresume.exception.ResourceNotFoundException;
 import io.github.adnansaliq.workmyresume.repository.ResumeRepository;
 import io.github.adnansaliq.workmyresume.repository.ResumeVersionRepository;
-import io.github.adnansaliq.workmyresume.repository.UserRepository;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,27 +21,27 @@ import java.util.List;
 @Service
 public class ResumeService {
 
-    private final UserRepository userRepository;
     private final ResumeRepository resumeRepository;
     private final ResumeVersionRepository resumeVersionRepository;
     private final FileStorageService fileStorageService;
     private final TextExtractionService textExtractionService;
+    private final ResumeAccessService resumeAccessService;
 
-    public ResumeService(UserRepository userRepository,
-                         ResumeRepository resumeRepository,
+    public ResumeService(ResumeRepository resumeRepository,
                          ResumeVersionRepository resumeVersionRepository,
                          FileStorageService fileStorageService,
-                         TextExtractionService textExtractionService) {
-        this.userRepository = userRepository;
+                         TextExtractionService textExtractionService,
+                         ResumeAccessService resumeAccessService) {
         this.resumeRepository = resumeRepository;
         this.resumeVersionRepository = resumeVersionRepository;
         this.fileStorageService = fileStorageService;
         this.textExtractionService = textExtractionService;
+        this.resumeAccessService = resumeAccessService;
     }
 
     @Transactional
     public ResumeResponse createResume(String email, CreateResumeRequest request) {
-        User user = getUserByEmail(email);
+        User user = resumeAccessService.requireUser(email);
 
         Resume resume = new Resume();
         resume.setUser(user);
@@ -56,7 +54,7 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public List<ResumeResponse> getResumesForUser(String email) {
-        User user = getUserByEmail(email);
+        User user = resumeAccessService.requireUser(email);
 
         return resumeRepository.findByUserId(user.getId())
                 .stream()
@@ -66,14 +64,7 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public ResumeDetailResponse getResumeDetail(String email, Long resumeId) {
-        User user = getUserByEmail(email);
-
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-
-        if (!resume.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
+        Resume resume = resumeAccessService.requireOwnedResume(email, resumeId);
 
         ResumeDetailResponse detail = new ResumeDetailResponse();
         detail.setId(resume.getId());
@@ -87,22 +78,7 @@ public class ResumeService {
 
     @Transactional
     public ResumeVersionResponse createVersion(String email, Long resumeId, CreateVersionRequest request) {
-        User user = getUserByEmail(email);
-
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-
-        // Same 404 whether the resume is missing or owned by someone else,
-        // so we don't reveal which resumes exist.
-        if (!resume.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
-
-        int nextVersionNumber = resumeVersionRepository
-                .findTopByResumeIdOrderByVersionNumberDesc(resumeId)
-                .map(ResumeVersion::getVersionNumber)
-                .map(n -> n + 1)
-                .orElse(1);
+        Resume resume = resumeAccessService.requireOwnedResume(email, resumeId);
 
         ResumeVersion version = new ResumeVersion();
         version.setResume(resume);
@@ -118,14 +94,7 @@ public class ResumeService {
     public ResumeVersionResponse uploadResumeFile(String email, Long resumeId, String title,
                                                   String originalFilename, String contentType,
                                                   long sizeBytes, byte[] content) {
-        User user = getUserByEmail(email);
-
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-
-        if (!resume.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
+        Resume resume = resumeAccessService.requireOwnedResume(email, resumeId);
 
         // Extract first: validates the file type before anything touches disk.
         String rawText = textExtractionService.extractText(originalFilename, contentType, content);
@@ -152,19 +121,7 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public ResumeFile downloadFile(String email, Long resumeId, Long versionId) {
-        User user = getUserByEmail(email);
-
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-        if (!resume.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
-
-        ResumeVersion version = resumeVersionRepository.findById(versionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-        if (!version.getResume().getId().equals(resume.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
+        ResumeVersion version = resumeAccessService.requireOwnedVersion(email, resumeId, versionId);
 
         return version.getFiles().stream()
                 .findFirst()
@@ -191,11 +148,6 @@ public class ResumeService {
             }
         }
         return (fallback != null && !fallback.isBlank()) ? fallback : "Untitled Resume";
-    }
-
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
     private ResumeResponse toResponse(Resume resume) {

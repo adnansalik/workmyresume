@@ -1,19 +1,13 @@
 package io.github.adnansaliq.workmyresume.service;
 
 import io.github.adnansaliq.workmyresume.domain.Plan;
-import io.github.adnansaliq.workmyresume.domain.Resume;
 import io.github.adnansaliq.workmyresume.domain.ResumeAnalysis;
 import io.github.adnansaliq.workmyresume.domain.ResumeVersion;
 import io.github.adnansaliq.workmyresume.domain.User;
 import io.github.adnansaliq.workmyresume.dto.ResumeAnalysisResponse;
 import io.github.adnansaliq.workmyresume.exception.BadRequestException;
-import io.github.adnansaliq.workmyresume.exception.ResourceNotFoundException;
 import io.github.adnansaliq.workmyresume.exception.UsageLimitExceededException;
 import io.github.adnansaliq.workmyresume.repository.ResumeAnalysisRepository;
-import io.github.adnansaliq.workmyresume.repository.ResumeRepository;
-import io.github.adnansaliq.workmyresume.repository.ResumeVersionRepository;
-import io.github.adnansaliq.workmyresume.repository.UserRepository;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,43 +16,26 @@ import java.time.OffsetDateTime;
 @Service
 public class AnalysisService {
 
-    private final UserRepository userRepository;
-    private final ResumeRepository resumeRepository;
-    private final ResumeVersionRepository resumeVersionRepository;
     private final ResumeAnalysisRepository resumeAnalysisRepository;
     private final ResumeAnalyzer resumeAnalyzer;
     private final SubscriptionService subscriptionService;
+    private final ResumeAccessService resumeAccessService;
 
-    public AnalysisService(UserRepository userRepository,
-                           ResumeRepository resumeRepository,
-                           ResumeVersionRepository resumeVersionRepository,
-                           ResumeAnalysisRepository resumeAnalysisRepository,
+    public AnalysisService(ResumeAnalysisRepository resumeAnalysisRepository,
                            ResumeAnalyzer resumeAnalyzer,
-                           SubscriptionService subscriptionService) {
-        this.userRepository = userRepository;
-        this.resumeRepository = resumeRepository;
-        this.resumeVersionRepository = resumeVersionRepository;
+                           SubscriptionService subscriptionService,
+                           ResumeAccessService resumeAccessService) {
         this.resumeAnalysisRepository = resumeAnalysisRepository;
         this.resumeAnalyzer = resumeAnalyzer;
         this.subscriptionService = subscriptionService;
+        this.resumeAccessService = resumeAccessService;
     }
 
     @Transactional
     public ResumeAnalysisResponse analyzeVersion(String email, Long resumeId, Long versionId,
                                                  String jobDescription) {
-        User user = getUserByEmail(email);
-
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-        if (!resume.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
-
-        ResumeVersion version = resumeVersionRepository.findById(versionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
-        if (!version.getResume().getId().equals(resume.getId())) {
-            throw new ResourceNotFoundException("Resume not found");
-        }
+        User user = resumeAccessService.requireUser(email);
+        ResumeVersion version = resumeAccessService.requireOwnedVersion(email, resumeId, versionId);
 
         if (version.getRawText() == null || version.getRawText().isBlank()) {
             throw new BadRequestException("Version has no text content to analyze");
@@ -78,11 +55,6 @@ public class AnalysisService {
 
         ResumeAnalysis saved = resumeAnalysisRepository.save(analysis);
         return toResponse(saved);
-    }
-
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
     /**
