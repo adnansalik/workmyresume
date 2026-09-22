@@ -48,9 +48,9 @@ Plan limits:
 - [ ] Payments (Stripe/Razorpay - after product usage model stabilizes)
 - [x] Resume domain + upload/storage + text extraction (PDF/DOCX/TXT)
 - [x] Resume analysis (LLM with heuristic fallback, job-description matching)
-- [ ] OAuth (Google/GitHub)
-- [x~] Testing (unit + integration, 37 tests)
-- [x~] Production hardening (env JWT secret, CORS, rate limiting; more to come)
+- [x] OAuth (Google/GitHub mapped to internal users)
+- [x~] Testing (unit + integration, 49 tests)
+- [x~] Production hardening (env JWT secret, CORS, rate limiting, Flyway migrations, actuator, security headers, CI)
 
 # Running
 
