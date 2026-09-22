@@ -63,3 +63,13 @@ app:
     model: gpt-4o-mini
     # api-key is NOT set here. Provide it via the APP_AI_APIKEY environment variable.
     # When it is unset or blank, the heuristic analyzer is used instead of the LLM.
+
+  payments:
+    razorpay:
+      # Set via RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET. Without them, checkout
+      # returns 503 (SERVICE_UNAVAILABLE) rather than making failed calls.
+      key-id: ${RAZORPAY_KEY_ID:}
+      key-secret: ${RAZORPAY_KEY_SECRET:}
+      # Webhook signature secret: RAZORPAY_WEBHOOK_SECRET.
+      webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+      base-url: https://api.razorpay.com/v1

@@ -121,6 +121,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.TOO_MANY_REQUESTS);
     }
 
+    @ExceptionHandler(PaymentNotConfiguredException.class)
+    public ResponseEntity<ExceptionResponse> handlePaymentsNotConfigured(PaymentNotConfiguredException ex){
+        ExceptionResponse response = new ExceptionResponse();
+        response.setMessage(ex.getMessage());
+        response.setTimestamp(OffsetDateTime.now());
+
+        return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ExceptionResponse> handleResourceNotFound(ResourceNotFoundException ex){
         ExceptionResponse response = new ExceptionResponse();

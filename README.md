@@ -45,7 +45,7 @@ Plan limits:
 - [x] JWT (env-configurable secret)
 - [x] Authorization (ROLE_USER / ROLE_ADMIN method security)
 - [x] Billing foundation (plans, subscriptions, lifecycle, usage quotas)
-- [ ] Payments (Stripe/Razorpay - after product usage model stabilizes)
+- [x~] Payments (Razorpay checkout + signature/webhook verification; needs live keys)
 - [x] Resume domain + upload/storage + text extraction (PDF/DOCX/TXT)
 - [x] Resume analysis (LLM with heuristic fallback, job-description matching)
 - [x] OAuth (Google/GitHub mapped to internal users)
@@ -77,3 +77,5 @@ cd backend && ./mvnw test            # uses the docker-compose dev database
 | `app.cors.allowed-origins` | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Browser origins allowed |
 | `app.rate-limit.*` | `APP_RATE_LIMIT_*` | 300 req / 60 s on `/auth/` | In-memory login brute-force protection |
 | `app.upload-dir` | `APP_UPLOAD_DIR` | `uploads` | Local file storage root |
+| `app.payments.razorpay.key-id` / `.key-secret` | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | *(unset)* | Enable checkout; unset → 503 |
+| `app.payments.razorpay.webhook-secret` | `RAZORPAY_WEBHOOK_SECRET` | *(unset)* | Verifies webhook signatures |
