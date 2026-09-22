@@ -16,7 +16,7 @@ class JwtUtilTest {
     // Mirrors the secret used by JwtUtil so tests can mint their own tokens.
     private static final String SECRET = "CHANGE_THIS_TO_A_32_CHAR_MIN_SECRET_KEY_123456";
 
-    private final JwtUtil jwtUtil = new JwtUtil();
+    private final JwtUtil jwtUtil = new JwtUtil(SECRET);
 
     private Key key() {
         return Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
